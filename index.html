@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社会科 オリジナル予想問題（練習用）</title>
+<style>
+  :root {
+    --main: #2b5797; --accent: #e07b39; --bg: #f7f8fa; --card: #ffffff;
+    --ok: #2e7d32; --ng: #c62828; --border: #dfe3e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    background: var(--bg); margin: 0; padding: 0; color: #222;
+  }
+  header {
+    background: var(--main); color: #fff; padding: 14px 16px;
+    position: sticky; top: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+  }
+  header h1 { font-size: 17px; margin: 0; }
+  #timer { font-size: 20px; font-weight: bold; background: rgba(255,255,255,.15); padding: 4px 12px; border-radius: 8px; }
+  #timer.warn { background: #c62828; }
+  .controls { display: flex; gap: 8px; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  button {
+    background: var(--main); color: #fff; border: none; border-radius: 6px;
+    padding: 9px 16px; font-size: 14px; cursor: pointer;
+  }
+  button.secondary { background: #6b7785; }
+  button.accent { background: var(--accent); }
+  button:disabled { background: #b0b6bd; cursor: not-allowed; }
+  main { max-width: 720px; margin: 0 auto; padding: 12px; }
+  .daimon-title {
+    background: #dbe6f5; color: var(--main); font-weight: bold; font-size: 16px;
+    padding: 10px 12px; border-radius: 8px; margin: 20px 0 10px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; margin-bottom: 14px;
+  }
+  .qnum { font-weight: bold; color: var(--main); margin-bottom: 6px; }
+  .qtext { margin-bottom: 8px; line-height: 1.6; font-size: 15px; }
+  .resource {
+    background: #f2f2f2; border-radius: 6px; padding: 10px 12px; margin: 8px 0;
+    font-size: 14px; line-height: 1.7; white-space: pre-line;
+  }
+  .choices label {
+    display: block; padding: 8px 10px; margin: 6px 0; border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; font-size: 15px;
+  }
+  .choices label:active, .choices label.selected { background: #eaf1fb; border-color: var(--main); }
+  .choices input { margin-right: 8px; }
+  input[type=text], textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px;
+    font-size: 15px; font-family: inherit;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .hint { font-size: 12px; color: #777; margin-top: 4px; }
+  .reveal-box { display: none; margin-top: 10px; padding: 10px; background: #fff8e1; border-radius: 6px; font-size: 14px; }
+  .reveal-box.show { display: block; }
+  .selfcheck { margin-top: 8px; font-size: 14px; }
+  .result-badge { font-weight: bold; margin-left: 8px; padding: 2px 8px; border-radius: 12px; font-size: 13px; }
+  .result-badge.correct { background: #e6f4ea; color: var(--ok); }
+  .result-badge.incorrect { background: #fdecea; color: var(--ng); }
+  #summary {
+    background: var(--card); border: 2px solid var(--main); border-radius: 10px;
+    padding: 16px; margin: 16px 0; display: none;
+  }
+  #summary.show { display: block; }
+  #summary h2 { color: var(--main); margin-top: 0; }
+  .score-big { font-size: 32px; font-weight: bold; color: var(--accent); }
+  .sec-breakdown { font-size: 14px; margin-top: 10px; line-height: 1.8; }
+  footer { text-align: center; padding: 24px 12px; font-size: 12px; color: #888; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>社会科 オリジナル予想問題（練習用）</h1>
+  <div id="timer">50:00</div>
+</header>
+
+<div class="controls">
+  <button id="startBtn">タイマー開始</button>
+  <button id="gradeBtn" class="accent">採点する</button>
+  <button id="jsonBtn" class="secondary">結果をJSONで保存</button>
+  <button id="resetBtn" class="secondary">リセット</button>
+</div>
+
+<main>
+  <div id="summary">
+    <h2>採点結果</h2>
+    <div>自動採点：<span class="score-big" id="scoreText">-</span></div>
+    <div class="sec-breakdown" id="secBreakdown"></div>
+    <p style="font-size:13px;color:#666;">※記述問題（自己採点）は「合っていた」にチェックした数のみ別途カウントされます。</p>
+  </div>
+
+  <div id="quiz"></div>
+</main>
+
+<footer>都立高校入試「社会」の出題傾向分析に基づくオリジナル問題です。</footer>
+
+<script>
+const QUESTIONS = [
+{ id:"1-1", daimon:"大問1", type:"choice", text:"次の文章は、神奈川県小田原市で行った地域調査の記録の一部である。この文章から読み取れる内容として最も適切なものを、下のア～エのうちから一つ選べ。",
+  resource:"＜調査記録＞\n○小田原駅を出発し、東口から城址公園方面へ徒歩で向かった。\n○駅前の通りを南東に約300m進むと、道が緩やかな下り坂に変わり、視界の先に堀の石垣が見えた。\n○石垣が見えた地点から、石垣に沿って南へさらに150mほど進むと、大きな橋（学橋）があり、渡った先に天守閣が見えた。\n○天守閣周辺は標高約30mの高台になっており、そこから相模湾を一望することができた。",
+  choices:["小田原駅から城址公園までの道のりは、一貫して上り坂であった。","石垣が見えた地点から橋までは、道沿いの距離でおよそ150mである。","天守閣は海に面した低地に立地しており、標高はおよそ0mである。","天守閣周辺は周囲を山地に囲まれているため、海を見ることはできない。"],
+  answer:1, explain:"アは下り坂の記述のみで一貫した上り坂ではない。ウは標高約30mと矛盾。エは相模湾を一望とあるため誤り。" },
+{ id:"1-2", daimon:"大問1", type:"choice", text:"次の文章で述べている歴史的文化財に当てはまるのは、下のア～エのうちのどれか。",
+  resource:"白漆喰の外壁と、鳥が羽を広げたような美しい姿から「白鷺城」とも呼ばれるこの城は、江戸時代初期に築かれた天守を中心とする城郭建築の代表例であり、1993年に法隆寺地域の仏教建造物とともに、我が国で最初に世界文化遺産として登録された。",
+  choices:["姫路城","松本城","犬山城","熊本城"], answer:0, explain:"白漆喰・白鷺城・1993年に法隆寺とともに日本最初の世界文化遺産に登録という記述から姫路城。" },
+{ id:"1-3", daimon:"大問1", type:"choice", text:"次の文章で述べている国会の種類に当てはまるのは、下のア～エのうちのどれか。",
+  resource:"内閣が必要と認めたとき、又はいずれかの議院の総議員の4分の1以上の要求があったときに召集される。会期は両議院一致の議決で定められる。",
+  choices:["常会","臨時会","特別会","参議院の緊急集会"], answer:1, explain:"内閣の必要・総議員4分の1以上の要求による召集は臨時会の特徴。" },
+
+{ id:"2-1", daimon:"大問2（世界地理）", type:"choice", text:"次のⅠの文章は、Ａ～Ｄのいずれかの都市（Ａ：カイロ　Ｂ：シンガポール　Ｃ：ローマ　Ｄ：モスクワ）の気候について述べたものである。Ⅱの表のア～エのうち、Ⅰの文章に当てはまる気候を選べ。",
+  resource:"Ⅰ　夏は高温で乾燥し、冬は温暖で降水量がやや多くなる気候を生かして、ぶどうやオリーブが古くから栽培されている。",
+  choices:["年平均気温9.5℃／年降水量690mm","年平均気温26.9℃／年降水量2150mm","年平均気温15.9℃／年降水量750mm","年平均気温21.8℃／年降水量25mm"],
+  answer:2, explain:"夏高温乾燥・冬温暖湿潤は地中海性気候（ローマ）の特徴。中程度の気温・降水量を示すウが該当。" },
+{ id:"2-2", daimon:"大問2（世界地理）", type:"choice", text:"次の表のア～エは、米・小麦・とうもろこし・大豆のいずれかの2022年における生産量上位3か国である。とうもろこしに当てはまるものを選べ。",
+  resource:"",
+  choices:["1位 中国／2位 インド／3位 バングラデシュ","1位 アメリカ合衆国／2位 中国／3位 ブラジル","1位 中国／2位 インド／3位 ロシア","1位 ブラジル／2位 アメリカ合衆国／3位 アルゼンチン"],
+  answer:1, explain:"とうもろこしはアメリカ合衆国が世界1位。アは米、ウは小麦、エは大豆の組み合わせに近い。" },
+{ id:"2-3", daimon:"大問2（世界地理）", type:"choice", text:"次の文章で述べている国として最も適切なのはどれか。",
+  resource:"2000年における日本のこの国からの輸入額は1000億円に満たない規模であったが、2020年には電気機器や機械類の輸出拠点としての成長を背景に2兆円を超える規模となった。近年は日本企業の進出も増加しており、人口が1億人に達するASEAN加盟国として、域内でも有数の工業国となっている。",
+  choices:["ベトナム","ラオス","ブルネイ","モンゴル"], answer:0, explain:"工業化進展・日本企業進出増・人口約1億人というASEAN加盟国の特徴からベトナム。" },
+
+{ id:"3-1", daimon:"大問3（日本地理）", type:"choice", text:"次の表のア～エは、静岡県、新潟県、鹿児島県、愛知県のいずれかの自然環境と産業の様子である。愛知県に当てはまるものを選べ。",
+  resource:"",
+  choices:["冬季に積雪の多い越後平野が広がり、稲作が盛んで、銘柄米の生産量は全国有数である。","温暖な気候を生かした茶や柑橘類の栽培が盛んで、山麓には楽器や自動車部品などの工業も立地している。","濃尾平野を中心に自動車関連の工業が高度に発達し、中京工業地帯の中心として製造品出荷額等が全国第1位である。","シラス台地が広がり、畜産業が盛んで、活動中の火山が見られる。"],
+  answer:2, explain:"濃尾平野・中京工業地帯・製造品出荷額等全国1位から愛知県。ア新潟県、イ静岡県、エ鹿児島県。" },
+{ id:"3-2", daimon:"大問3（日本地理）", type:"desc", text:"次の資料は、ある地方都市の駅周辺における1995年と2020年の様子の変化である。資料から読み取れる、駅周辺の土地利用の変化について、その要因に触れながら、簡単に述べよ。",
+  resource:"○1995年：駅の西側には水田が広がり、住宅は駅周辺の一部に限られていた。\n○2020年：新幹線の駅が開業し、駅の西側には商業施設やマンションが立ち並び、水田は見られなくなった。",
+  modelAnswer:"新幹線の駅が開業したことで交通の利便性が高まり、駅西側に広がっていた水田は、商業施設やマンションなどが立ち並ぶ市街地へと変化した。" },
+{ id:"3-3", daimon:"大問3（日本地理）", type:"choice", text:"次の資料は、Ａ市とＢ市を結ぶ鉄道の所要時間の変化である。資料から読み取れる内容として最も適切なものを選べ。",
+  resource:"新幹線開業前：所要時間2時間40分（乗換え2回）\n新幹線開業後：所要時間1時間10分（乗換え0回）",
+  choices:["所要時間は短縮されたが、乗換え回数は変わらなかった。","所要時間が短縮されるとともに、乗換えなしで移動できるようになった。","所要時間は延びたが、利便性は向上した。","開業とは関係なく、所要時間が短縮された。"],
+  answer:1, explain:"所要時間の短縮（2時間40分→1時間10分）と乗換え回数の減少（2回→0回）の両方が読み取れる。" },
+
+{ id:"4-1", daimon:"大問4（歴史：衣）", type:"order", text:"次のア～エは、衣服に関する出来事である。時期の古いものから順に記号を並べよ（例：アイウエ の形式で入力）。",
+  resource:"ア　唐の文化の影響を受け、貴族の間で位階に応じた服装の制度（衣服令）が定められた。\nイ　明治政府の欧化政策で、官吏・軍人の制服に洋服が採用され、鹿鳴館で洋装の舞踏会が開かれた。\nウ　武家社会の広がりとともに、直垂や小袖が武士の日常着として定着した。\nエ　第二次世界大戦後、既製服産業が発達し、洋服が一般家庭にも広く普及した。",
+  answer:"アウイエ", explain:"衣服令（奈良時代）→武士の直垂・小袖（鎌倉～室町）→鹿鳴館・洋装（明治）→既製服産業（戦後）の順。" },
+{ id:"4-2", daimon:"大問4（歴史：衣）", type:"choice", text:"次の文章で述べている政策に当てはまるのはどれか。",
+  resource:"倹約令の一環として、庶民の衣服に絹の使用を禁じ、木綿や麻を用いるよう定めた。華美な服装を取り締まることで、身分秩序の維持と支出の抑制を図った。",
+  choices:["楽市・楽座","寛政の改革","地租改正","農地改革"], answer:1, explain:"倹約令・絹の使用禁止は江戸時代の寛政の改革（松平定信）の特徴。" },
+{ id:"4-3", daimon:"大問4（歴史：衣）", type:"desc", text:"次のⅠは1955年から1975年の既製服生産額の推移の傾向、Ⅱはこの時期の社会の様子である。既製服の生産額が増加した理由を、簡単に述べよ。",
+  resource:"Ⅰ　既製服の生産額は、1955年から1975年にかけて一貫して増加を続けた。\nⅡ　高度経済成長期に都市部への人口集中が進み、女性の社会進出や共働き世帯の増加により、家庭で衣服を仕立てる時間的余裕が少なくなった。また、大量生産技術の導入により、既製服の品質が向上し、価格も安定した。",
+  modelAnswer:"高度経済成長に伴う人口の都市集中や女性の社会進出により、家庭で衣服を作る時間的余裕が少なくなったことに加え、大量生産技術の向上で既製服の品質が高まり価格も安定したため、需要が増加し、生産額も増加した。" },
+{ id:"4-4", daimon:"大問4（歴史：衣）", type:"choice", text:"学生服（詰襟・セーラー服）が全国の学校に広まった時期として最も適切なのはどれか。",
+  resource:"Ａ：1872年（学制公布）～1886年頃　Ｂ：1886年頃～1920年頃　Ｃ：1920年頃～1945年　Ｄ：1945年～1970年頃",
+  choices:["Ａの時期","Ｂの時期","Ｃの時期","Ｄの時期"], answer:1, explain:"学生服は明治後期から大正時代にかけて全国の学校に広まった。" },
+
+{ id:"5-1", daimon:"大問5（公民）", type:"choice", text:"次の条文が規定している内容に当てはまるのはどれか。",
+  resource:"国会は、国権の最高機関であって、国の唯一の立法機関である。",
+  choices:["日本国憲法第1条","日本国憲法第9条","日本国憲法第41条","日本国憲法第25条"], answer:2, explain:"この条文は日本国憲法第41条。" },
+{ id:"5-2", daimon:"大問5（公民）", type:"choice", text:"次の表の衆議院・参議院の権限について、ＡとＢの組み合わせとして正しいものを選べ。",
+  resource:"予算の先議権：衆議院○／参議院Ａ\n内閣不信任の決議：衆議院○／参議院Ｂ",
+  choices:["Ａ：○　Ｂ：○","Ａ：○　Ｂ：×","Ａ：×　Ｂ：○","Ａ：×　Ｂ：×"], answer:3, explain:"予算の先議権・内閣不信任決議はいずれも衆議院のみの権限。" },
+{ id:"5-3", daimon:"大問5（公民）", type:"choice", text:"地方公共団体の住民が、条例の制定・改廃を請求する際に必要な署名数として正しいものを選べ。",
+  resource:"",
+  choices:["有権者の3分の1以上","有権者の50分の1以上","有権者の過半数","有権者の3分の2以上"], answer:1, explain:"条例の制定・改廃請求に必要な署名数は有権者の50分の1以上。" },
+{ id:"5-4", daimon:"大問5（公民）", type:"desc", text:"次の資料は、ある地方公共団体で実施された住民投票とその後の対応である。住民投票が地方自治において果たす役割について、簡単に述べよ。",
+  resource:"○市庁舎の建て替え位置をめぐり、住民投票が実施された。\n○投票の結果、住民の過半数が現在地での建て替えを支持した。\n○市議会は、この結果を踏まえて、建て替え位置を定める条例を可決した。",
+  modelAnswer:"住民投票により、行政の重要な政策決定に住民の意思を直接反映させることができ、その結果が議会の意思決定にも影響を与えることで、住民自治を実現する役割を果たしている。" },
+
+{ id:"6-1", daimon:"大問6（融合）", type:"order", text:"次のア～エは、地球環境問題に関する国際的な取り組みである。時期の古いものから順に記号を並べよ（例：アイウエ）。",
+  resource:"ア　京都議定書が採択された。\nイ　国連人間環境会議がストックホルムで開催された。\nウ　パリ協定が採択された。\nエ　国連環境開発会議（地球サミット）がリオデジャネイロで開催された。",
+  answer:"イエアウ", explain:"人間環境会議（1972）→地球サミット（1992）→京都議定書（1997）→パリ協定（2015）の順。" },
+{ id:"6-2", daimon:"大問6（融合）", type:"choice", text:"次の文章で述べている国として最も適切なのはどれか。",
+  resource:"国土の大部分が平地で、風力発電の導入が早くから進んでおり、再生可能エネルギーが発電量の半分近くを占めている。首都近郊には風力発電機を製造する企業が立地し、世界各国に製品を輸出している。",
+  choices:["デンマーク","サウジアラビア","ベネズエラ","カタール"], answer:0, explain:"平地が多く風力発電の導入が早くから進んだことからデンマーク。" },
+{ id:"6-3", daimon:"大問6（融合）", type:"choice", text:"世界の州別の二酸化炭素排出量の割合の推移について、最も適切な内容を選べ。",
+  resource:"1990年から2020年にかけて、世界のエネルギー消費・生産構造は大きく変化し、特にアジア州における工業化の進展が、世界全体の排出量の内訳に大きな影響を与えた。",
+  choices:["アジア州の排出割合は、1990年から2020年にかけて低下し続けている。","アジア州の排出割合は、経済成長を背景に1990年から2020年にかけて大きく増加した。","アフリカ州の排出割合が、全ての州の中で最も高い。","北アメリカ州の排出割合は、この期間一貫して増加し続けた。"],
+  answer:1, explain:"アジア州は工業化の進展により、二酸化炭素排出割合が大きく増加した。" },
+];
+
+const quizEl = document.getElementById('quiz');
+let lastDaimon = "";
+QUESTIONS.forEach((qu, idx) => {
+  if (qu.daimon !== lastDaimon) {
+    const t = document.createElement('div');
+    t.className = 'daimon-title';
+    t.textContent = qu.daimon;
+    quizEl.appendChild(t);
+    lastDaimon = qu.daimon;
+  }
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'card-' + qu.id;
+
+  let html = `<div class="qnum">問題 ${idx+1}</div><div class="qtext">${qu.text}</div>`;
+  if (qu.resource) html += `<div class="resource">${qu.resource}</div>`;
+
+  if (qu.type === 'choice') {
+    html += `<div class="choices">`;
+    const marks = ['ア','イ','ウ','エ'];
+    qu.choices.forEach((c, i) => {
+      html += `<label><input type="radio" name="${qu.id}" value="${i}"> ${marks[i]}　${c}</label>`;
+    });
+    html += `</div>`;
+  } else if (qu.type === 'order') {
+    html += `<input type="text" id="input-${qu.id}" placeholder="例：アイウエ"><div class="hint">記号のみをカタカナで順番に入力してください</div>`;
+  } else if (qu.type === 'desc') {
+    html += `<textarea id="input-${qu.id}" placeholder="解答を入力してください"></textarea>`;
+    html += `<div class="selfcheck"><button type="button" class="secondary" onclick="revealModel('${qu.id}')">解答例を見る</button>
+      <span id="reveal-${qu.id}" class="reveal-box"></span></div>
+      <div class="selfcheck"><label><input type="checkbox" id="selfok-${qu.id}"> 自己採点：合っていた</label></div>`;
+  }
+  html += `<div id="result-${qu.id}"></div>`;
+  card.innerHTML = html;
+  quizEl.appendChild(card);
+});
+
+function revealModel(id) {
+  const qu = QUESTIONS.find(x => x.id === id);
+  const box = document.getElementById('reveal-' + id);
+  box.textContent = '【解答例】' + qu.modelAnswer;
+  box.classList.add('show');
+}
+
+// Timer
+let seconds = 50 * 60;
+let timerHandle = null;
+const timerEl = document.getElementById('timer');
+function tick() {
+  if (seconds <= 0) { clearInterval(timerHandle); timerEl.textContent = "00:00"; alert("試験時間（50分）が終了しました。"); return; }
+  seconds--;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  timerEl.textContent = m + ":" + s;
+  if (seconds <= 300) timerEl.classList.add('warn');
+}
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (timerHandle) return;
+  timerHandle = setInterval(tick, 1000);
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('startBtn').textContent = "計測中...";
+});
+
+let lastResults = null;
+
+function grade() {
+  let correct = 0, gradable = 0;
+  const secStats = {};
+  const results = [];
+
+  QUESTIONS.forEach(qu => {
+    if (!secStats[qu.daimon]) secStats[qu.daimon] = { correct: 0, total: 0, selfTotal: 0, selfOk: 0 };
+    const resEl = document.getElementById('result-' + qu.id);
+    let userAnswer = null, isCorrect = null;
+
+    if (qu.type === 'choice') {
+      gradable++; secStats[qu.daimon].total++;
+      const sel = document.querySelector(`input[name="${qu.id}"]:checked`);
+      userAnswer = sel ? parseInt(sel.value) : null;
+      isCorrect = userAnswer === qu.answer;
+      if (isCorrect) { correct++; secStats[qu.daimon].correct++; }
+      const marks = ['ア','イ','ウ','エ'];
+      resEl.innerHTML = `<span class="result-badge ${isCorrect ? 'correct' : 'incorrect'}">${isCorrect ? '正解' : '不正解'}</span> 正答：${marks[qu.answer]}　${qu.explain}`;
+    } else if (qu.type === 'order') {
+      gradable++; secStats[qu.daimon].total++;
+      const inp = document.getElementById('input-' + qu.id);
+      userAnswer = (inp.value || '').trim();
+      isCorrect = userAnswer === qu.answer;
+      if (isCorrect) { correct++; secStats[qu.daimon].correct++; }
+      resEl.innerHTML = `<span class="result-badge ${isCorrect ? 'correct' : 'incorrect'}">${isCorrect ? '正解' : '不正解'}</span> 正答：${qu.answer}　${qu.explain}`;
+    } else if (qu.type === 'desc') {
+      const inp = document.getElementById('input-' + qu.id);
+      userAnswer = inp.value || '';
+      const selfCheck = document.getElementById('selfok-' + qu.id);
+      isCorrect = selfCheck.checked;
+      secStats[qu.daimon].selfTotal++;
+      if (isCorrect) secStats[qu.daimon].selfOk++;
+      resEl.innerHTML = `<span class="result-badge ${isCorrect ? 'correct' : 'incorrect'}">${isCorrect ? '自己採点：◯' : '自己採点：未チェック'}</span>`;
+    }
+    results.push({ id: qu.id, daimon: qu.daimon, type: qu.type, userAnswer, correctAnswer: qu.type === 'desc' ? qu.modelAnswer : qu.answer, isCorrect });
+  });
+
+  document.getElementById('scoreText').textContent = `${correct} / ${gradable} 問（記号・並べ替え問題のみ）`;
+  let breakdown = '';
+  Object.keys(secStats).forEach(d => {
+    const s = secStats[d];
+    breakdown += `<div>${d}：${s.correct}/${s.total}問正解`;
+    if (s.selfTotal) breakdown += `（記述 自己採点◯ ${s.selfOk}/${s.selfTotal}）`;
+    breakdown += `</div>`;
+  });
+  document.getElementById('secBreakdown').innerHTML = breakdown;
+  document.getElementById('summary').classList.add('show');
+  document.getElementById('summary').scrollIntoView({ behavior: 'smooth' });
+
+  lastResults = { gradedAt: new Date().toISOString(), score: `${correct}/${gradable}`, details: results };
+}
+
+document.getElementById('gradeBtn').addEventListener('click', grade);
+
+document.getElementById('jsonBtn').addEventListener('click', () => {
+  if (!lastResults) grade();
+  const blob = new Blob([JSON.stringify(lastResults, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '社会_練習結果_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('入力内容をすべてリセットします。よろしいですか？')) location.reload();
+});
+</script>
+</body>
+</html>
