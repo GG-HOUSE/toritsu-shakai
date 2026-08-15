@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>弱点特化問題 社会（練習用）</title>
+<style>
+  :root { --main:#2e7d32; --accent:#f9a825; --bg:#f2f8f3; --card:#fff; --ok:#43a047; --ng:#c62828; --border:#d7e5d9; }
+  * { box-sizing: border-box; }
+  body { font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif; background:var(--bg); margin:0; color:#222; }
+  header { background:var(--main); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  header h1 { font-size:16px; margin:0; }
+  #timer { font-size:20px; font-weight:bold; background:rgba(255,255,255,.15); padding:4px 12px; border-radius:8px; }
+  #timer.warn { background:#c62828; }
+  .controls { display:flex; gap:8px; padding:10px 16px; background:#fff; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  button { background:var(--main); color:#fff; border:none; border-radius:6px; padding:9px 16px; font-size:14px; cursor:pointer; }
+  button.secondary { background:#6b7785; } button.accent { background:var(--accent); }
+  main { max-width:720px; margin:0 auto; padding:12px; }
+  .daimon-title { background:#e2f0e3; color:var(--main); font-weight:bold; font-size:16px; padding:10px 12px; border-radius:8px; margin:20px 0 10px; }
+  .note-box { background:#fff8e1; border-radius:8px; padding:12px 14px; margin:14px 0; font-size:13.5px; line-height:1.7; color:#7a5b00; }
+  .weak-summary { background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; font-size:14px; line-height:1.9; }
+  .weak-summary b { color:var(--main); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .qnum { font-weight:bold; color:var(--main); margin-bottom:6px; }
+  .qtext { margin-bottom:8px; line-height:1.6; font-size:15px; }
+  .resource { background:#f2f2f2; border-radius:6px; padding:10px 12px; margin:8px 0; font-size:14px; line-height:1.7; white-space:pre-line; }
+  .choices label { display:block; padding:8px 10px; margin:6px 0; border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:15px; }
+  .choices label:hover { background:#e8f5e9; border-color:var(--main); }
+  .choices input { margin-right:8px; }
+  input[type=text], textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; }
+  textarea { min-height:70px; resize:vertical; }
+  .hint { font-size:12px; color:#777; margin-top:4px; }
+  .reveal-box { display:none; margin-top:10px; padding:10px; background:#fff8e1; border-radius:6px; font-size:14px; }
+  .reveal-box.show { display:block; }
+  .selfcheck { margin-top:8px; font-size:14px; }
+  .result-badge { font-weight:bold; margin-left:8px; padding:2px 8px; border-radius:12px; font-size:13px; }
+  .result-badge.correct { background:#e6f4ea; color:var(--ok); }
+  .result-badge.incorrect { background:#fdecea; color:var(--ng); }
+  #summary { background:var(--card); border:2px solid var(--main); border-radius:10px; padding:16px; margin:16px 0; display:none; }
+  #summary.show { display:block; }
+  #summary h2 { color:var(--main); margin-top:0; }
+  .score-big { font-size:32px; font-weight:bold; color:var(--accent); }
+  .sec-breakdown { font-size:14px; margin-top:10px; line-height:1.8; }
+  footer { text-align:center; padding:24px 12px; font-size:12px; color:#888; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>社会　弱点特化問題（2026/8/12実施分の誤答分析より）</h1>
+  <div id="timer">30:00</div>
+</header>
+
+<div class="controls">
+  <button id="startBtn">タイマー開始</button>
+  <button id="gradeBtn" class="accent">採点する</button>
+  <button id="jsonBtn" class="secondary">結果をJSONで保存</button>
+  <button id="resetBtn" class="secondary">リセット</button>
+</div>
+
+<main>
+  <div class="weak-summary">
+    <div><b>前回の結果：</b>8/17問正解</div>
+    <div><b>弱点：</b>公民（4問中4問不正解）／記述問題（3問中3問不正解）／並べ替え問題（2問中2問不正解）／歴史全般</div>
+    <div>この問題集は上記の弱点を重点的に復習できるよう構成しています。</div>
+  </div>
+  <div id="summary">
+    <h2>採点結果</h2>
+    <div>自動採点：<span class="score-big" id="scoreText">-</span></div>
+    <div class="sec-breakdown" id="secBreakdown"></div>
+    <p style="font-size:13px;color:#666;">※記述問題（自己採点）は「合っていた」にチェックした数のみ別途カウントされます。</p>
+  </div>
+  <div id="quiz"></div>
+</main>
+
+<footer>都立高校入試「社会」対策：2026/8/12実施分の練習結果の誤答分析に基づく、弱点特化オリジナル問題です。</footer>
+
+<script>
+const QUESTIONS = [
+{ id:"A-1", daimon:"A　公民（最優先復習）", type:"choice", text:"次の文章で述べている仕組みに当てはまるのはどれか。",
+  resource:"日本の国会は衆議院と参議院の二つの議院で構成されている。予算の議決や条約の承認、内閣総理大臣の指名などについて、両院の議決が異なる場合に衆議院の議決が優先される場合があるが、この仕組みを何というか。",
+  choices:["衆議院の優越","三権分立","議院内閣制","弾劾裁判"], answer:0, explain:"予算・条約承認・内閣総理大臣の指名などで衆議院の議決が優先されるのは衆議院の優越。" },
+{ id:"A-2", daimon:"A　公民（最優先復習）", type:"choice", text:"次の文章で述べている仕組みに当てはまるのはどれか。",
+  resource:"内閣は国会の信任に基づいて成立し、内閣総理大臣は国会議員の中から国会の議決で指名される。内閣は行政権の行使について、国会に対して連帯して責任を負う。このような仕組みを何というか。",
+  choices:["議院内閣制","大統領制","直接民主制","三審制"], answer:0, explain:"内閣が国会の信任に基づき、国会に連帯責任を負う仕組みは議院内閣制。" },
+{ id:"A-3", daimon:"A　公民（最優先復習）", type:"choice", text:"次の文章で述べている仕組みの目的として最も適切なのはどれか。",
+  resource:"裁判では、第一審の判決に不服がある場合には第二審の裁判所に控訴し、さらに不服があれば第三審の裁判所に上告することができる。",
+  choices:["裁判を慎重に行い、誤った判決を防いで人権を守るため","裁判官の人数を増やすため","国会の権限を強化するため","内閣の解散権を制限するため"], answer:0, explain:"第一審→控訴→上告と審理を慎重に行い、誤判を防ぎ人権を守る仕組みが三審制。" },
+{ id:"A-4", daimon:"A　公民（最優先復習）", type:"choice", text:"次の文章で述べている権利に当てはまるのはどれか。",
+  resource:"地方公共団体の住民は、有権者の一定数以上の署名を集めることで、条例の制定・改廃や、監査、議会の解散、首長・議員の解職などを求めることができる。",
+  choices:["直接請求権","国民審査権","請願権","弾劾権"], answer:0, explain:"署名を集めて条例の制定改廃や解散・解職などを求める権利は直接請求権。" },
+{ id:"A-5", daimon:"A　公民（最優先復習）", type:"desc", text:"次の資料は、ある市で行われた住民投票とその後の対応についてまとめたものである。資料から読み取れる、住民投票が果たす役割について、簡単に述べよ。（※前回不正解だった問題のリベンジ）",
+  resource:"ある市では、大規模な公共施設の建設をめぐり住民投票が行われ、反対多数という結果になった。市長と議会は、この結果を受けて建設計画の見直しを行った。",
+  modelAnswer:"住民投票によって住民の意思を直接示すことができ、その結果が市長や議会の政策判断に反映されることで、住民の意思を地方自治に生かす役割を果たしている。" },
+
+{ id:"B-1", daimon:"B　記述問題トレーニング", type:"desc", text:"次のⅠ・Ⅱの資料から読み取れる、この地域の土地利用の変化について、その理由に触れながら簡単に述べよ。",
+  resource:"Ⅰ　1990年：駅周辺には水田が広がり、住宅は少なかった。\nⅡ　2020年：新幹線の駅が開業し、駅周辺には商業施設や高層マンションが立ち並んでいる。",
+  modelAnswer:"新幹線の駅が開業したことで交通の利便性が高まり、駅周辺に広がっていた水田は、商業施設や高層マンションが立ち並ぶ市街地へと変化した。" },
+{ id:"B-2", daimon:"B　記述問題トレーニング", type:"desc", text:"次のⅠ・Ⅱの資料を活用し、この時期に既製服の生産額が増加した理由を簡単に述べよ。",
+  resource:"Ⅰ　高度経済成長期には女性の社会進出が進み、共働き世帯が増加した。\nⅡ　既製服の生産技術が向上し、工場で大量生産された衣服が安く販売されるようになった。",
+  modelAnswer:"女性の社会進出や共働き世帯の増加により家庭で衣服を仕立てる時間的余裕が少なくなったことに加え、大量生産技術の向上で既製服の品質が高まり価格が安定したため、需要が増加し生産額も増加した。" },
+{ id:"B-3", daimon:"B　記述問題トレーニング", type:"desc", text:"次のⅠ・Ⅱの資料から、少子高齢化が社会保障制度に与える影響について簡単に述べよ。",
+  resource:"Ⅰ　日本では少子高齢化が進み、現役世代の減少と高齢者の増加が同時に進んでいる。\nⅡ　社会保障の財源は、主に現役世代が納める保険料と税金でまかなわれている。",
+  modelAnswer:"少子高齢化により保険料や税金を納める現役世代が減少する一方、社会保障を受ける高齢者が増加するため、現役世代1人あたりの負担が重くなり、社会保障制度の維持が難しくなる。" },
+
+{ id:"C-1", daimon:"C　並べ替え問題の克服", type:"order", text:"次のア～エは、幕末から明治初期の外交に関する出来事である。時期の古いものから順に記号を並べよ（例：アイウエ）。",
+  resource:"ア　日米和親条約が結ばれ、下田・函館の2港が開かれた。\nイ　日米修好通商条約が結ばれ、関税自主権のない不平等な条約となった。\nウ　王政復古の大号令が出され、天皇中心の新政府樹立が宣言された。\nエ　岩倉使節団が欧米に派遣され、条約改正の予備交渉を行った。",
+  answer:"アイウエ", explain:"日米和親条約（1854）→日米修好通商条約（1858）→王政復古の大号令（1867）→岩倉使節団派遣（1871）の順。" },
+{ id:"C-2", daimon:"C　並べ替え問題の克服", type:"order", text:"次のア～エは、戦後の日本に関する出来事である。時期の古いものから順に記号を並べよ（例：アイウエ）。",
+  resource:"ア　衆議院議員選挙法が改正され、満20歳以上の男女に選挙権が与えられた。\nイ　日本国憲法が公布された。\nウ　農地改革が行われ、多くの自作農が生まれた。\nエ　サンフランシスコ平和条約が結ばれ、日本は独立を回復した。",
+  answer:"アウイエ", explain:"選挙法改正（1945年12月）→農地改革開始（1946年〜）→日本国憲法公布（1946年11月）→サンフランシスコ平和条約（1951年）の順。" },
+{ id:"C-3", daimon:"C　並べ替え問題の克服", type:"choice", text:"次の文章で述べている義務と合わせて日本国憲法が定める国民の三大義務に当てはまるのはどれか。",
+  resource:"日本国憲法は、子どもに普通教育を受けさせる義務、勤労の義務とあわせて、もう一つの義務を国民に課している。",
+  choices:["納税の義務","兵役の義務","選挙の義務","労働組合に加入する義務"], answer:0, explain:"教育を受けさせる義務・勤労の義務とあわせて日本国憲法が定める三大義務は納税の義務。" },
+
+{ id:"D-1", daimon:"D　小問の再確認", type:"choice", text:"次の文章で述べている気候として最も適切なのはどれか。",
+  resource:"年間を通して気温が高く、気温の差が小さい。年降水量が多く、スコールと呼ばれる強い雨が見られることがある。",
+  choices:["熱帯雨林気候","地中海性気候","冷帯（亜寒帯）気候","砂漠気候"], answer:0, explain:"気温が高く年較差が小さい、降水量が多くスコールがあるのは熱帯雨林気候の特徴。" },
+{ id:"D-2", daimon:"D　小問の再確認", type:"choice", text:"2万5千分の1の地形図において、実際の距離が1kmである2地点間の地図上の長さとして正しいのはどれか。",
+  resource:"", choices:["2cm","4cm","25cm","40cm"], answer:1, explain:"1km＝100,000cm。100,000÷25,000＝4cm。" },
+{ id:"D-3", daimon:"D　小問の再確認", type:"choice", text:"次の文章で述べている国として最も適切なのはどれか。",
+  resource:"国土を赤道が通り、コーヒー豆の生産量が世界有数であるこの国は、南アメリカ大陸最大の面積と人口を有する。",
+  choices:["ブラジル","アルゼンチン","チリ","ペルー"], answer:0, explain:"赤道が通り、コーヒー豆生産量世界有数、南米最大の面積・人口の国はブラジル。" },
+{ id:"D-4", daimon:"D　小問の再確認", type:"choice", text:"次の文章で述べている制度に当てはまるのはどれか。",
+  resource:"聖徳太子（厩戸皇子）が定めた、家柄にとらわれず、能力や功績によって役人を取り立てるための制度。",
+  choices:["冠位十二階","十七条の憲法","大化の改新","墾田永年私財法"], answer:0, explain:"家柄にとらわれず能力で役人を採用する制度は冠位十二階。" },
+];
+
+const quizEl = document.getElementById('quiz');
+let lastDaimon = "";
+QUESTIONS.forEach((qu, idx) => {
+  if (qu.daimon !== lastDaimon) {
+    const t = document.createElement('div'); t.className = 'daimon-title'; t.textContent = qu.daimon;
+    quizEl.appendChild(t); lastDaimon = qu.daimon;
+    if (qu.daimon === "B　記述問題トレーニング") {
+      const n = document.createElement('div'); n.className = 'note-box';
+      n.textContent = '記述問題は「資料から読み取れる事実」＋「その理由・背景」の2つをつなげて書くのが基本の型です。';
+      quizEl.appendChild(n);
+    }
+    if (qu.daimon === "C　並べ替え問題の克服") {
+      const n = document.createElement('div'); n.className = 'note-box';
+      n.textContent = '並べ替え問題は、出来事の「年号」だけでなく「原因→結果」のつながりで覚えると解きやすくなります。';
+      quizEl.appendChild(n);
+    }
+  }
+  const card = document.createElement('div'); card.className = 'card'; card.id = 'card-' + qu.id;
+  let html = `<div class="qnum">問題 ${idx+1}</div><div class="qtext">${qu.text}</div>`;
+  if (qu.resource) html += `<div class="resource">${qu.resource}</div>`;
+  if (qu.type === 'choice') {
+    html += `<div class="choices">`;
+    const marks = ['ア','イ','ウ','エ'];
+    qu.choices.forEach((c, i) => { html += `<label><input type="radio" name="${qu.id}" value="${i}"> ${marks[i]}　${c}</label>`; });
+    html += `</div>`;
+  } else if (qu.type === 'order') {
+    html += `<input type="text" id="input-${qu.id}" placeholder="例：アイウエ"><div class="hint">記号のみをカタカナで順番に入力してください</div>`;
+  } else if (qu.type === 'desc') {
+    html += `<textarea id="input-${qu.id}" placeholder="解答を入力してください"></textarea>`;
+    html += `<div class="selfcheck"><button type="button" class="secondary" onclick="revealModel('${qu.id}')">解答例を見る</button>
+      <span id="reveal-${qu.id}" class="reveal-box"></span></div>
+      <div class="selfcheck"><label><input type="checkbox" id="selfok-${qu.id}"> 自己採点：合っていた</label></div>`;
+  }
+  html += `<div id="result-${qu.id}"></div>`;
+  card.innerHTML = html;
+  quizEl.appendChild(card);
+});
+
+function revealModel(id) {
+  const qu = QUESTIONS.find(x => x.id === id);
+  const box = document.getElementById('reveal-' + id);
+  box.textContent = '【解答例】' + qu.modelAnswer;
+  box.classList.add('show');
+}
+
+let seconds = 30 * 60;
+let timerHandle = null;
+const timerEl = document.getElementById('timer');
+function tick() {
+  if (seconds <= 0) { clearInterval(timerHandle); timerEl.textContent = "00:00"; alert("目安の検査時間（30分）が終了しました。"); return; }
+  seconds--;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  timerEl.textContent = m + ":" + s;
+  if (seconds <= 300) timerEl.classList.add('warn');
+}
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (timerHandle) return;
+  timerHandle = setInterval(tick, 1000);
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('startBtn').textContent = "計測中...";
+});
+
+let lastResults = null;
+function grade() {
+  let correct = 0, gradable = 0;
+  const secStats = {}; const results = [];
+  QUESTIONS.forEach(qu => {
+    if (!secStats[qu.daimon]) secStats[qu.daimon] = { correct:0, total:0, selfTotal:0, selfOk:0 };
+    const resEl = document.getElementById('result-' + qu.id);
+    let userAnswer = null, isCorrect = null;
+    if (qu.type === 'choice') {
+      gradable++; secStats[qu.daimon].total++;
+      const sel = document.querySelector(`input[name="${qu.id}"]:checked`);
+      userAnswer = sel ? parseInt(sel.value) : null;
+      isCorrect = userAnswer === qu.answer;
+      if (isCorrect) { correct++; secStats[qu.daimon].correct++; }
+      const marks = ['ア','イ','ウ','エ'];
+      resEl.innerHTML = `<span class="result-badge ${isCorrect?'correct':'incorrect'}">${isCorrect?'正解':'不正解'}</span> 正答：${marks[qu.answer]}　${qu.explain}`;
+    } else if (qu.type === 'order') {
+      gradable++; secStats[qu.daimon].total++;
+      const inp = document.getElementById('input-' + qu.id);
+      userAnswer = (inp.value || '').trim();
+      isCorrect = userAnswer === qu.answer;
+      if (isCorrect) { correct++; secStats[qu.daimon].correct++; }
+      resEl.innerHTML = `<span class="result-badge ${isCorrect?'correct':'incorrect'}">${isCorrect?'正解':'不正解'}</span> 正答：${qu.answer}　${qu.explain}`;
+    } else if (qu.type === 'desc') {
+      const inp = document.getElementById('input-' + qu.id);
+      userAnswer = inp.value || '';
+      const selfCheck = document.getElementById('selfok-' + qu.id);
+      isCorrect = selfCheck.checked;
+      secStats[qu.daimon].selfTotal++;
+      if (isCorrect) secStats[qu.daimon].selfOk++;
+      resEl.innerHTML = `<span class="result-badge ${isCorrect?'correct':'incorrect'}">${isCorrect?'自己採点：◯':'自己採点：未チェック'}</span>`;
+    }
+    results.push({ id:qu.id, daimon:qu.daimon, type:qu.type, userAnswer, correctAnswer: qu.type==='desc'?qu.modelAnswer:qu.answer, isCorrect });
+  });
+  document.getElementById('scoreText').textContent = `${correct} / ${gradable} 問（記号・並べ替え問題のみ）`;
+  let breakdown = '';
+  Object.keys(secStats).forEach(d => {
+    const s = secStats[d];
+    breakdown += `<div>${d}：${s.correct}/${s.total}問正解`;
+    if (s.selfTotal) breakdown += `（記述 自己採点◯ ${s.selfOk}/${s.selfTotal}）`;
+    breakdown += `</div>`;
+  });
+  document.getElementById('secBreakdown').innerHTML = breakdown;
+  document.getElementById('summary').classList.add('show');
+  document.getElementById('summary').scrollIntoView({ behavior:'smooth' });
+  lastResults = { examTitle: "社会 弱点特化問題（2026/8/12実施分の誤答分析より）", gradedAt: new Date().toISOString(), score: `${correct}/${gradable}`, details: results };
+}
+document.getElementById('gradeBtn').addEventListener('click', grade);
+document.getElementById('jsonBtn').addEventListener('click', () => {
+  if (!lastResults) grade();
+  const blob = new Blob([JSON.stringify(lastResults, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = '社会_弱点特化_練習結果_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('入力内容をすべてリセットします。よろしいですか？')) location.reload();
+});
+</script>
+</body>
+</html>
