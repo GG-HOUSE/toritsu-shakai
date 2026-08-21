@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>都立社会 オリジナル問題 第2回（練習用）</title>
+<style>
+  :root { --main:#2e7d32; --accent:#f9a825; --bg:#f2f8f3; --card:#fff; --ok:#43a047; --ng:#c62828; --border:#d7e5d9; }
+  * { box-sizing: border-box; }
+  body { font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif; background:var(--bg); margin:0; color:#222; }
+  header { background:var(--main); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  header h1 { font-size:16px; margin:0; }
+  #timer { font-size:20px; font-weight:bold; background:rgba(255,255,255,.15); padding:4px 12px; border-radius:8px; }
+  #timer.warn { background:#c62828; }
+  .controls { display:flex; gap:8px; padding:10px 16px; background:#fff; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  button { background:var(--main); color:#fff; border:none; border-radius:6px; padding:9px 16px; font-size:14px; cursor:pointer; }
+  button.secondary { background:#6b7785; } button.accent { background:var(--accent); }
+  main { max-width:720px; margin:0 auto; padding:12px; }
+  .daimon-title { background:#e2f0e3; color:var(--main); font-weight:bold; font-size:16px; padding:10px 12px; border-radius:8px; margin:20px 0 10px; }
+  .lead { background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:12px; font-size:14px; line-height:1.8; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .qnum { font-weight:bold; color:var(--main); margin-bottom:6px; }
+  .qtext { margin-bottom:8px; line-height:1.6; font-size:15px; }
+  .resource { background:#f2f2f2; border-radius:6px; padding:10px 12px; margin:8px 0; font-size:14px; line-height:1.7; white-space:pre-line; }
+  .choices label { display:block; padding:8px 10px; margin:6px 0; border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:15px; }
+  .choices label:hover { background:#e8f5e9; border-color:var(--main); }
+  .choices input { margin-right:8px; }
+  input[type=text], textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; }
+  textarea { min-height:70px; resize:vertical; }
+  .hint { font-size:12px; color:#777; margin-top:4px; }
+  .reveal-box { display:none; margin-top:10px; padding:10px; background:#fff8e1; border-radius:6px; font-size:14px; }
+  .reveal-box.show { display:block; }
+  .selfcheck { margin-top:8px; font-size:14px; }
+  .result-badge { font-weight:bold; margin-left:8px; padding:2px 8px; border-radius:12px; font-size:13px; }
+  .result-badge.correct { background:#e6f4ea; color:var(--ok); }
+  .result-badge.incorrect { background:#fdecea; color:var(--ng); }
+  #summary { background:var(--card); border:2px solid var(--main); border-radius:10px; padding:16px; margin:16px 0; display:none; }
+  #summary.show { display:block; }
+  #summary h2 { color:var(--main); margin-top:0; }
+  .score-big { font-size:32px; font-weight:bold; color:var(--accent); }
+  .sec-breakdown { font-size:14px; margin-top:10px; line-height:1.8; }
+  footer { text-align:center; padding:24px 12px; font-size:12px; color:#888; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>都立社会　オリジナル問題　第2回（本番形式・全20問）</h1>
+  <div id="timer">50:00</div>
+</header>
+
+<div class="controls">
+  <button id="startBtn">タイマー開始</button>
+  <button id="gradeBtn" class="accent">採点する</button>
+  <button id="jsonBtn" class="secondary">結果をJSONで保存</button>
+  <button id="resetBtn" class="secondary">リセット</button>
+</div>
+
+<main>
+  <div id="summary">
+    <h2>採点結果</h2>
+    <div>自動採点：<span class="score-big" id="scoreText">-</span></div>
+    <div class="sec-breakdown" id="secBreakdown"></div>
+    <p style="font-size:13px;color:#666;">※記述問題（自己採点）は「合っていた」にチェックした数のみ別途カウントされます。</p>
+  </div>
+  <div id="quiz"></div>
+</main>
+
+<footer>都立高校入試「社会」の出題傾向分析に基づくオリジナル問題（第2回）です。前回の弱点（公民・記述・並べ替え）を厚めに配分しています。</footer>
+
+<script>
+const LEADS = {
+  "大問4（歴史：「道」の歴史）": "人やものが行き交う「道」は、それぞれの時代の政治や経済のあり方を映してきた。古代には都と地方を結ぶ道が整えられ、中世には商人や僧が各地を行き来した。近世には五街道が整えられ、近代には鉄道が国内の輸送を大きく変えた。"
+};
+
+const QUESTIONS = [
+{ id:"1-1", daimon:"大問1（小問集合）", type:"choice", text:"次の地形図に関する説明として最も適切なのはどれか。",
+  resource:"2万5千分の1の地形図上で、A地点とB地点の間の長さは6cmであった。",
+  choices:["実際の距離は150mである。","実際の距離は600mである。","実際の距離は1500mである。","実際の距離は6000mである。"],
+  answer:2, explain:"6cm×25,000＝150,000cm＝1500m。縮尺の計算は「地図上の長さ×縮尺の分母」。" },
+{ id:"1-2", daimon:"大問1（小問集合）", type:"choice", text:"次の文章で述べている人物に当てはまるのはどれか。",
+  resource:"天皇を中心とする政治の仕組みを整えるため、家柄にとらわれず能力によって役人を取り立てる制度を定め、また、役人の心構えを示した17か条のきまりを定めた。",
+  choices:["聖徳太子（厩戸皇子）","中大兄皇子","聖武天皇","桓武天皇"], answer:0, explain:"冠位十二階と十七条の憲法を定めたのは聖徳太子（厩戸皇子）。" },
+{ id:"1-3", daimon:"大問1（小問集合）", type:"choice", text:"次の文章で述べている権利に当てはまるのはどれか。",
+  resource:"日本国憲法が保障する基本的人権のうち、健康で文化的な最低限度の生活を営む権利であり、社会権の中心となるもの。",
+  choices:["生存権","参政権","自由権","平等権"], answer:0, explain:"健康で文化的な最低限度の生活を営む権利は生存権（憲法第25条）。社会権の中心。" },
+
+{ id:"2-1", daimon:"大問2（世界地理）", type:"choice", text:"次のⅠの文章は、世界のある地域の農業について述べたものである。この地域として最も適切なのはどれか。",
+  resource:"Ⅰ　夏は高温で乾燥し、冬は温暖で雨が多い気候を生かして、オリーブやぶどう、オレンジなどの果樹栽培が盛んに行われている。",
+  choices:["地中海沿岸","東南アジア","サハラ砂漠南縁","シベリア"], answer:0, explain:"夏に高温乾燥・冬に温暖湿潤の地中海性気候で、オリーブ・ぶどう・オレンジの栽培が盛んなのは地中海沿岸。" },
+{ id:"2-2", daimon:"大問2（世界地理）", type:"choice", text:"次のⅡの表のア～エは、アメリカ合衆国、中国、ドイツ、オーストラリアのいずれかの人口、輸出上位品目を示したものである。オーストラリアに当てはまるものを選べ。",
+  resource:"",
+  choices:["人口 約14億人／輸出上位品目：機械類、衣類、繊維品","人口 約3.3億人／輸出上位品目：機械類、自動車、石油製品、航空機","人口 約8300万人／輸出上位品目：機械類、自動車、医薬品","人口 約2600万人／輸出上位品目：鉄鉱石、石炭、液化天然ガス、金"],
+  answer:3, explain:"人口約2600万人と少なく、鉄鉱石・石炭・液化天然ガスなど資源が輸出の中心なのはオーストラリア。ア中国、イアメリカ、ウドイツ。" },
+{ id:"2-3", daimon:"大問2（世界地理）", type:"choice", text:"次のⅢの文章で述べている国際的な枠組みに当てはまるのはどれか。",
+  resource:"Ⅲ　ヨーロッパの多くの国が加盟し、加盟国間で人・もの・お金の移動を自由にしている。多くの加盟国が共通通貨ユーロを導入している。",
+  choices:["ＥＵ（ヨーロッパ連合）","ＡＳＥＡＮ","ＵＳＭＣＡ","ＡＰＥＣ"], answer:0, explain:"共通通貨ユーロ、人・もの・お金の移動の自由化を進めるヨーロッパの枠組みはＥＵ。" },
+
+{ id:"3-1", daimon:"大問3（日本地理）", type:"choice", text:"次のⅠの文章で述べている県として最も適切なのはどれか。",
+  resource:"Ⅰ　冬の降雪量が多く、豊富な雪どけ水を生かした稲作が盛んである。米の産出額は全国有数で、伝統工芸品の生産も行われている。",
+  choices:["新潟県","高知県","静岡県","宮崎県"], answer:0, explain:"冬の降雪量が多く雪どけ水を生かした稲作、米の産出額が全国有数なのは新潟県。" },
+{ id:"3-2", daimon:"大問3（日本地理）", type:"desc", text:"次のⅡ・Ⅲの資料は、ある地方都市の中心市街地の変化についてまとめたものである。ⅡとⅢを活用し、中心市街地の商店街で空き店舗が増加した理由について、簡単に述べよ。",
+  resource:"Ⅱ　1990年以降、郊外の幹線道路沿いに、広い駐車場を備えた大型商業施設が次々と開業した。\nⅢ　自動車の保有台数が増加する一方、中心市街地の商店街には駐車場が少なく、来訪者数は年々減少している。",
+  modelAnswer:"郊外の幹線道路沿いに広い駐車場を備えた大型商業施設が開業する一方、自動車の保有台数が増加しても中心市街地の商店街には駐車場が少なく来訪者が減少したため、商店街の売り上げが落ち込み空き店舗が増加した。" },
+{ id:"3-3", daimon:"大問3（日本地理）", type:"choice", text:"次のⅣの文章で述べている発電方法に当てはまるのはどれか。",
+  resource:"Ⅳ　火山活動が盛んな地域の地下にある高温の蒸気を利用して発電する。二酸化炭素の排出が少なく、天候に左右されにくいという特徴がある。",
+  choices:["地熱発電","太陽光発電","風力発電","水力発電"], answer:0, explain:"火山地帯の地下の高温蒸気を利用し、天候に左右されにくいのは地熱発電。" },
+
+{ id:"4-1", daimon:"大問4（歴史：「道」の歴史）", type:"order", text:"次のア～エは、交通や輸送に関する出来事について述べたものである。時期の古いものから順に記号を並べよ（例：アイウエ）。",
+  resource:"ア　律令国家のもとで、都と地方の国府を結ぶ駅路が整備され、駅家が置かれた。\nイ　平清盛が大輪田泊を修築し、日宋貿易を盛んに行った。\nウ　江戸幕府が東海道など五街道を整備し、宿場や関所を置いた。\nエ　新橋・横浜間に日本で最初の鉄道が開通した。",
+  answer:"アイウエ", explain:"駅路の整備（律令国家・8世紀）→大輪田泊の修築と日宋貿易（平安末期・12世紀）→五街道の整備（江戸時代初期・17世紀）→新橋・横浜間の鉄道開通（1872年）の順。" },
+{ id:"4-2", daimon:"大問4（歴史：「道」の歴史）", type:"choice", text:"次の文章で述べている政策に当てはまるのはどれか。",
+  resource:"織田信長は、城下町での商工業の発展を図るため、市場の税を免除し、座の特権を廃止して自由な営業を認めた。",
+  choices:["楽市・楽座","刀狩","太閤検地","参勤交代"], answer:0, explain:"市場の税を免除し座の特権を廃止して自由な営業を認めたのは織田信長の楽市・楽座。" },
+{ id:"4-3", daimon:"大問4（歴史：「道」の歴史）", type:"desc", text:"次のⅠ・Ⅱの資料を活用し、明治政府が鉄道の建設を積極的に進めた理由について、簡単に述べよ。",
+  resource:"Ⅰ　明治政府は「富国強兵」「殖産興業」を掲げ、近代的な産業の育成に力を入れた。\nⅡ　鉄道の開通により、原料や製品を大量に、かつ短時間で輸送できるようになり、各地の生産地と港が結ばれた。",
+  modelAnswer:"明治政府は富国強兵・殖産興業を掲げて近代産業の育成を目指しており、鉄道によって原料や製品を大量かつ短時間で輸送し、各地の生産地と港を結ぶことで、産業の発展と貿易の拡大を図ろうとしたため。" },
+{ id:"4-4", daimon:"大問4（歴史：「道」の歴史）", type:"choice", text:"次の文章で述べている出来事に当てはまるのはどれか。",
+  resource:"1858年に結ばれたこの条約により、函館・神奈川・長崎・新潟・兵庫の5港が開かれたが、日本には関税自主権がなく、相手国に領事裁判権を認める不平等な内容であった。",
+  choices:["日米修好通商条約","日米和親条約","下関条約","ポーツマス条約"], answer:0, explain:"1858年、5港を開港し、関税自主権がなく領事裁判権を認めた不平等条約は日米修好通商条約。" },
+
+{ id:"5-1", daimon:"大問5（公民）", type:"choice", text:"次の文章で述べている原則に当てはまるのはどれか。",
+  resource:"国の権力を立法権・行政権・司法権の三つに分け、それぞれ国会・内閣・裁判所という独立した機関に担わせることで、権力の集中を防ぎ、国民の権利を守ろうとする考え方。",
+  choices:["三権分立","国民主権","法の下の平等","地方自治"], answer:0, explain:"立法・行政・司法に権力を分け、独立した機関に担わせて権力集中を防ぐ考え方は三権分立。" },
+{ id:"5-2", daimon:"大問5（公民）", type:"choice", text:"次の文章で述べている制度に当てはまるのはどれか。",
+  resource:"国民の中からくじで選ばれた人が、重大な刑事事件の裁判に参加し、裁判官とともに有罪・無罪や刑の内容を決める制度。2009年から実施されている。",
+  choices:["裁判員制度","国民審査","国民投票","住民投票"], answer:0, explain:"くじで選ばれた国民が重大な刑事裁判に参加する2009年開始の制度は裁判員制度。" },
+{ id:"5-3", daimon:"大問5（公民）", type:"choice", text:"次の文章で述べている働きをする機関に当てはまるのはどれか。",
+  resource:"景気の安定を図るため、市中の銀行との間で国債などを売買して通貨量を調整する（公開市場操作）。また、紙幣を発行する唯一の銀行でもある。",
+  choices:["日本銀行","財務省","証券取引所","国税庁"], answer:0, explain:"公開市場操作を行い、紙幣を発行する唯一の銀行（発券銀行）は日本銀行。" },
+{ id:"5-4", daimon:"大問5（公民）", type:"desc", text:"次のⅠ・Ⅱの資料を活用し、間接税である消費税の特徴について、直接税である所得税と比較しながら簡単に述べよ。",
+  resource:"Ⅰ　所得税は、所得が多い人ほど高い税率が適用される累進課税の仕組みをとっている。\nⅡ　消費税は、所得の大小にかかわらず、商品やサービスを購入するすべての人が同じ税率で負担する。",
+  modelAnswer:"所得税は所得が多い人ほど税率が高くなる累進課税であるのに対し、消費税は所得の大小にかかわらず同じ税率で負担するため、所得の低い人ほど所得に占める税負担の割合が大きくなるという逆進性がある。" },
+
+{ id:"6-1", daimon:"大問6（融合問題）", type:"order", text:"次のア～エは、20世紀の世界と日本に関する出来事について述べたものである。時期の古いものから順に記号を並べよ（例：アイウエ）。",
+  resource:"ア　第一次世界大戦が始まり、日本は日英同盟を理由に参戦した。\nイ　世界恐慌が起こり、各国が経済的な混乱におちいった。\nウ　国際連合が発足し、日本は1956年に加盟した。\nエ　石油危機（オイルショック）が起こり、日本の高度経済成長が終わった。",
+  answer:"アイウエ", explain:"第一次世界大戦（1914年）→世界恐慌（1929年）→国連発足（1945年）・日本加盟（1956年）→石油危機（1973年）の順。" },
+{ id:"6-2", daimon:"大問6（融合問題）", type:"choice", text:"次の文章で述べている国際機関に当てはまるのはどれか。",
+  resource:"国際連合の主要機関の一つで、世界の平和と安全の維持に主要な責任を負う。アメリカ・イギリス・フランス・ロシア・中国の5か国が常任理事国であり、拒否権をもつ。",
+  choices:["安全保障理事会","総会","国際司法裁判所","経済社会理事会"], answer:0, explain:"5常任理事国が拒否権をもち、世界の平和と安全の維持に主要な責任を負うのは安全保障理事会。" },
+{ id:"6-3", daimon:"大問6（融合問題）", type:"desc", text:"次のⅠ・Ⅱの資料を活用し、日本が食料の多くを輸入に頼っていることによって生じる課題について、簡単に述べよ。",
+  resource:"Ⅰ　日本の食料自給率（カロリーベース）は約38％で、先進国の中でも低い水準にある。\nⅡ　輸入相手国での不作や紛争、輸送費の上昇などが起こると、食料の価格が大きく変動することがある。",
+  modelAnswer:"日本の食料自給率は約38％と低く多くを輸入に頼っているため、輸入相手国での不作や紛争、輸送費の上昇などが起こると食料の安定した確保が難しくなり、価格が大きく変動して国民の生活に影響が及ぶという課題がある。" },
+];
+
+const quizEl = document.getElementById('quiz');
+let lastDaimon = "";
+QUESTIONS.forEach((qu, idx) => {
+  if (qu.daimon !== lastDaimon) {
+    const t = document.createElement('div'); t.className = 'daimon-title'; t.textContent = qu.daimon;
+    quizEl.appendChild(t); lastDaimon = qu.daimon;
+    if (LEADS[qu.daimon]) {
+      const l = document.createElement('div'); l.className = 'lead'; l.textContent = LEADS[qu.daimon];
+      quizEl.appendChild(l);
+    }
+  }
+  const card = document.createElement('div'); card.className = 'card'; card.id = 'card-' + qu.id;
+  let html = `<div class="qnum">問題 ${idx+1}</div><div class="qtext">${qu.text}</div>`;
+  if (qu.resource) html += `<div class="resource">${qu.resource}</div>`;
+  if (qu.type === 'choice') {
+    html += `<div class="choices">`;
+    const marks = ['ア','イ','ウ','エ'];
+    qu.choices.forEach((c, i) => { html += `<label><input type="radio" name="${qu.id}" value="${i}"> ${marks[i]}　${c}</label>`; });
+    html += `</div>`;
+  } else if (qu.type === 'order') {
+    html += `<input type="text" id="input-${qu.id}" placeholder="例：アイウエ"><div class="hint">記号のみをカタカナで順番に入力してください</div>`;
+  } else if (qu.type === 'desc') {
+    html += `<textarea id="input-${qu.id}" placeholder="解答を入力してください"></textarea>`;
+    html += `<div class="selfcheck"><button type="button" class="secondary" onclick="revealModel('${qu.id}')">解答例を見る</button>
+      <span id="reveal-${qu.id}" class="reveal-box"></span></div>
+      <div class="selfcheck"><label><input type="checkbox" id="selfok-${qu.id}"> 自己採点：合っていた</label></div>`;
+  }
+  html += `<div id="result-${qu.id}"></div>`;
+  card.innerHTML = html;
+  quizEl.appendChild(card);
+});
+
+function revealModel(id) {
+  const qu = QUESTIONS.find(x => x.id === id);
+  const box = document.getElementById('reveal-' + id);
+  box.textContent = '【解答例】' + qu.modelAnswer;
+  box.classList.add('show');
+}
+
+let seconds = 50 * 60;
+let timerHandle = null;
+const timerEl = document.getElementById('timer');
+function tick() {
+  if (seconds <= 0) { clearInterval(timerHandle); timerEl.textContent = "00:00"; alert("目安の検査時間（50分）が終了しました。"); return; }
+  seconds--;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  timerEl.textContent = m + ":" + s;
+  if (seconds <= 300) timerEl.classList.add('warn');
+}
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (timerHandle) return;
+  timerHandle = setInterval(tick, 1000);
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('startBtn').textContent = "計測中...";
+});
+
+let lastResults = null;
+function grade() {
+  let correct = 0, gradable = 0;
+  const secStats = {}; const results = [];
+  QUESTIONS.forEach(qu => {
+    if (!secStats[qu.daimon]) secStats[qu.daimon] = { correct:0, total:0, selfTotal:0, selfOk:0 };
+    const resEl = document.getElementById('result-' + qu.id);
+    let userAnswer = null, isCorrect = null;
+    if (qu.type === 'choice') {
+      gradable++; secStats[qu.daimon].total++;
+      const sel = document.querySelector(`input[name="${qu.id}"]:checked`);
+      userAnswer = sel ? parseInt(sel.value) : null;
+      isCorrect = userAnswer === qu.answer;
+      if (isCorrect) { correct++; secStats[qu.daimon].correct++; }
+      const marks = ['ア','イ','ウ','エ'];
+      resEl.innerHTML = `<span class="result-badge ${isCorrect?'correct':'incorrect'}">${isCorrect?'正解':'不正解'}</span> 正答：${marks[qu.answer]}　${qu.explain}`;
+    } else if (qu.type === 'order') {
+      gradable++; secStats[qu.daimon].total++;
+      const inp = document.getElementById('input-' + qu.id);
+      userAnswer = (inp.value || '').trim();
+      isCorrect = userAnswer === qu.answer;
+      if (isCorrect) { correct++; secStats[qu.daimon].correct++; }
+      resEl.innerHTML = `<span class="result-badge ${isCorrect?'correct':'incorrect'}">${isCorrect?'正解':'不正解'}</span> 正答：${qu.answer}　${qu.explain}`;
+    } else if (qu.type === 'desc') {
+      const inp = document.getElementById('input-' + qu.id);
+      userAnswer = inp.value || '';
+      const selfCheck = document.getElementById('selfok-' + qu.id);
+      isCorrect = selfCheck.checked;
+      secStats[qu.daimon].selfTotal++;
+      if (isCorrect) secStats[qu.daimon].selfOk++;
+      resEl.innerHTML = `<span class="result-badge ${isCorrect?'correct':'incorrect'}">${isCorrect?'自己採点：◯':'自己採点：未チェック'}</span>`;
+    }
+    results.push({ id:qu.id, daimon:qu.daimon, type:qu.type, userAnswer, correctAnswer: qu.type==='desc'?qu.modelAnswer:qu.answer, isCorrect });
+  });
+  document.getElementById('scoreText').textContent = `${correct} / ${gradable} 問（記号・並べ替え問題のみ）`;
+  let breakdown = '';
+  Object.keys(secStats).forEach(d => {
+    const s = secStats[d];
+    breakdown += `<div>${d}：${s.correct}/${s.total}問正解`;
+    if (s.selfTotal) breakdown += `（記述 自己採点◯ ${s.selfOk}/${s.selfTotal}）`;
+    breakdown += `</div>`;
+  });
+  document.getElementById('secBreakdown').innerHTML = breakdown;
+  document.getElementById('summary').classList.add('show');
+  document.getElementById('summary').scrollIntoView({ behavior:'smooth' });
+  lastResults = { examTitle: "都立社会 オリジナル問題 第2回", gradedAt: new Date().toISOString(), score: `${correct}/${gradable}`, details: results };
+}
+document.getElementById('gradeBtn').addEventListener('click', grade);
+document.getElementById('jsonBtn').addEventListener('click', () => {
+  if (!lastResults) grade();
+  const blob = new Blob([JSON.stringify(lastResults, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = '社会_練習結果_第2回_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('入力内容をすべてリセットします。よろしいですか？')) location.reload();
+});
+</script>
+</body>
+</html>
